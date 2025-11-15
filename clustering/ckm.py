@@ -343,6 +343,7 @@ class CKM:
         - fit: function -> None = Learn the position of each cluster on a data-set X.
         - predict: function -> np.ndarray[int] = Assign at each data point its cluster.
     """
+    # TODO Return the best result according to a metric function.
 
     def __init__(self, K: int, m: int, lower: float, upper: float, seed: int | float = 12, history: History = History.OFF, init_centroids: InitCentroids = InitCentroids.UNIFORM, init_Omega: InitOmega = InitOmega.NORMAL) -> None:
         """
