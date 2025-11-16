@@ -44,7 +44,7 @@ class InitOmega(Enum):
     NORMAL: int = 1
 
 
-def _Sk(X: np.ndarray[float], Omega: np.ndarray[float], Beta: np.ndarray[float] | None = None) -> np.ndarray[complex]:
+def Sk(X: np.ndarray[float], Omega: np.ndarray[float], Beta: np.ndarray[float] | None = None) -> np.ndarray[complex]:
     """
     Computes the compressive sketch of a dataset using weighted complex random Fourier features.
     This function implements the sketching operator.
@@ -80,7 +80,7 @@ def _Sk(X: np.ndarray[float], Omega: np.ndarray[float], Beta: np.ndarray[float] 
         for j in range(Omega.shape[0])]) #S [j] = Σ_k β_k exp(−i ⟨X[k], Omega[j]⟩).
 
 
-def _step1(r: np.ndarray[complex], Omega: np.ndarray[float], D: int, lower: float | int, upper: float | int, init: InitCentroids, X: np.ndarray[float], max_iters: int = 3) -> np.ndarray[float]:
+def step1(r: np.ndarray[complex], Omega: np.ndarray[float], D: int, lower: float | int, upper: float | int, init: InitCentroids, X: np.ndarray[float], max_iters: int = 3) -> np.ndarray[float]:
     """
     Computes the gradient descent of the negative function step1.
 
@@ -109,7 +109,7 @@ def _step1(r: np.ndarray[complex], Omega: np.ndarray[float], D: int, lower: floa
     assert isinstance(r, np.ndarray) and np.issubdtype(r.dtype, np.complexfloating) and r.size > 0, ":param r: has to be a non-empty-array of complex numbers."
     assert isinstance(Omega, np.ndarray) and np.issubdtype(Omega.dtype, np.floating) and Omega.size > 0, ":param Omega: has to be a non-empty-array of floating numbers."
     assert isinstance(D, int) and D > 0, ":param D: must be an integer greater than 0."
-    assert (isinstance(lower, (int, float))) and (isinstance(upper, (int, float))), ":params lower, upper: must be either a float or a integer."
+    assert (isinstance(lower, (int, float))) and (isinstance(upper, (int, float))) and lower < upper, ":params lower, upper: must be either a float or a integer with :param lower: < :param upper:."
     assert isinstance(init, InitCentroids), ":param init: must be an enumeration of InitCentroids."
     assert isinstance(X, np.ndarray) and np.issubdtype(X.dtype, np.floating) and X.size > 0, ":param X: has to be a non-empty-array of floating numbers."
     assert isinstance(max_iters, int) and max_iters > 0, ":param max_iters: must be an integer greater than 0."
@@ -148,7 +148,7 @@ def _step1(r: np.ndarray[complex], Omega: np.ndarray[float], D: int, lower: floa
 
     return best_c
 
-def _step2(C: np.ndarray[float], Omega: np.ndarray[float], c_new: np.ndarray[float], A_c: np.ndarray[complex]) -> tuple[np.ndarray[float], np.ndarray[complex]]:
+def step2(C: np.ndarray[float], Omega: np.ndarray[float], c_new: np.ndarray[float], A_c: np.ndarray[complex]) -> tuple[np.ndarray[float], np.ndarray[complex]]:
     """
     Add a cluster in the group of candidates and update their complex sketch.
 
@@ -181,7 +181,7 @@ def _step2(C: np.ndarray[float], Omega: np.ndarray[float], c_new: np.ndarray[flo
     return np.vstack((C, c_new)), np.vstack((A_c, (np.exp(-1j * (c_new @ Omega.T)))))
 
 
-def _step3(zhat: np.ndarray[complex], A_c: np.ndarray[complex], C: np.ndarray[float], K: int) -> tuple[np.ndarray[float], np.ndarray[complex]]:
+def step3(zhat: np.ndarray[complex], A_c: np.ndarray[complex], C: np.ndarray[float], K: int) -> tuple[np.ndarray[float], np.ndarray[complex]]:
     """
     Computes the minimization of the function step3 only if we have K+1 centroids.
 
@@ -224,7 +224,7 @@ def _step3(zhat: np.ndarray[complex], A_c: np.ndarray[complex], C: np.ndarray[fl
     return C[mask, :], A_c[mask, :]
 
 
-def _step4(zhat: np.ndarray[complex], A_c: np.ndarray[complex]) -> np.ndarray[float]:
+def step4(zhat: np.ndarray[complex], A_c: np.ndarray[complex]) -> np.ndarray[float]:
     """
     Computes the minimization of the function step4.
 
@@ -260,7 +260,7 @@ def _step4(zhat: np.ndarray[complex], A_c: np.ndarray[complex]) -> np.ndarray[fl
     return Alpha
 
 
-def _step5(zhat: np.ndarray[complex], Omega: np.ndarray[float], C: np.ndarray[float], A_c: np.ndarray[complex], Alpha: np.ndarray[float], r: np.ndarray[complex], lower: float | int, upper: float | int, epochs: int = 1000, eta: float | int = 1e-3) -> tuple[np.ndarray[float], np.ndarray[float]]:
+def step5(zhat: np.ndarray[complex], Omega: np.ndarray[float], C: np.ndarray[float], A_c: np.ndarray[complex], Alpha: np.ndarray[float], r: np.ndarray[complex], lower: float | int, upper: float | int, epochs: int = 1000, eta: float | int = 1e-3) -> tuple[np.ndarray[float], np.ndarray[float]]:
     """
     Computes the joint gradient descent of the function step5.
 
@@ -297,7 +297,7 @@ def _step5(zhat: np.ndarray[complex], Omega: np.ndarray[float], C: np.ndarray[fl
     assert isinstance(A_c, np.ndarray) and np.issubdtype(A_c.dtype, np.complexfloating), ":param A_c: has to be an array of complex numbers."
     assert isinstance(Alpha, np.ndarray) and np.issubdtype(Alpha.dtype, np.floating) and Alpha.size > 0, ":param Alpha: has to be a non-empty-array of floating numbers."
     assert isinstance(r, np.ndarray) and np.issubdtype(r.dtype, np.complexfloating) and r.size > 0, ":param r: has to be a non-empty-array of complex numbers."
-    assert isinstance(lower, (int, float)) and isinstance(upper, (int, float)), ":params lower, upper: must be either a float or a integer."
+    assert isinstance(lower, (int, float)) and isinstance(upper, (int, float)) and lower < upper, ":params lower, upper: must be either a float or a integer with :param lower: < :param upper:."
     assert isinstance(epochs, int) and epochs > 0, ":param epochs: must be an integer greater than 0."
     assert isinstance(eta, (int, float)) and eta > 0, ":param eta: must be an integer or a float greater than 0."
 
@@ -316,7 +316,7 @@ def _step5(zhat: np.ndarray[complex], Omega: np.ndarray[float], C: np.ndarray[fl
         A_c = np.exp(-1j * (C @ Omega.T))
 
         # Compute the Alpha given the new A_c
-        Alpha = _step4(zhat=zhat, A_c=A_c)
+        Alpha = step4(zhat=zhat, A_c=A_c)
 
         # Update the residual
         r = zhat - A_c.T @ Alpha
@@ -390,7 +390,7 @@ class CKM:
 
         assert (self._K > 0) and (isinstance(self._K, int)), ":param K: must be an integer greater than zero."
         assert (self.m > 0) and (isinstance(self.m, int)), ":param m: must be an integer greater than zero."
-        assert (isinstance(self._lower, (int, float))) and (isinstance(self._upper, (int, float))), ":params lower, upper: must be either a float or a integer."
+        assert (isinstance(self._lower, (int, float))) and (isinstance(self._upper, (int, float))) and self._lower < self._upper, ":params lower, upper: must be either a float or a integer with :param lower: < :param upper:."
         assert isinstance(self.seed, int), ":param seed: must be either a float or a integer."
         assert isinstance(self.history, History), ":param history: must be an enumeration of History."
         assert isinstance(self.init_centroids, InitCentroids), ":param init_centroids: must be an enumeration of InitCentroids."
@@ -500,7 +500,7 @@ class CKM:
 
         Omega: np.ndarray[float] = self.Omega
 
-        zhat: np.ndarray[complex] = _Sk(X=X, Omega=Omega)
+        zhat: np.ndarray[complex] = Sk(X=X, Omega=Omega)
 
         r: np.ndarray[complex] = zhat.copy()
 
@@ -508,16 +508,16 @@ class CKM:
 
         for _ in tqdm(range(1, 2*self._K+1), desc="TRAINING"):
 
-            c_new: np.ndarray[float] = _step1(r=r, Omega=Omega, D=self._D, lower=self._lower, upper=self._upper, init=self.init_centroids, X=X)
+            c_new: np.ndarray[float] = step1(r=r, Omega=Omega, D=self._D, lower=self._lower, upper=self._upper, init=self.init_centroids, X=X)
 
-            self.centroids, A_c = _step2(C=self.centroids, Omega=Omega, c_new=c_new, A_c=A_c)
+            self.centroids, A_c = step2(C=self.centroids, Omega=Omega, c_new=c_new, A_c=A_c)
 
             if self.centroids.shape[0] > self._K:
-                self.centroids, A_c = _step3(zhat=zhat, A_c=A_c, C=self.centroids, K=self._K)
+                self.centroids, A_c = step3(zhat=zhat, A_c=A_c, C=self.centroids, K=self._K)
 
-            Alpha: np.ndarray[float] = _step4(zhat=zhat, A_c=A_c)
+            Alpha: np.ndarray[float] = step4(zhat=zhat, A_c=A_c)
 
-            self.centroids, Alpha = _step5(zhat=zhat, Omega=Omega, C=self.centroids, A_c=A_c, Alpha=Alpha, r=zhat - A_c.T @ Alpha, lower=self._lower, upper=self._upper, epochs=100, eta=1e-2)
+            self.centroids, Alpha = step5(zhat=zhat, Omega=Omega, C=self.centroids, A_c=A_c, Alpha=Alpha, r=zhat - A_c.T @ Alpha, lower=self._lower, upper=self._upper, epochs=100, eta=1e-2)
 
             if self.history.value == History.ON.value:  self._all_centroids.append(self.centroids)
 
@@ -542,3 +542,15 @@ class CKM:
         """
         assert isinstance(X, np.ndarray) and np.issubdtype(X.dtype, np.floating) and X.size > 0, ":param X: has to be a non-empty-array of floating numbers."
         return np.argmin(a=np.linalg.norm(x=(X[:, None, :] - self.centroids), axis=2), axis=1)
+    
+
+__all__ = ["Sk",
+           "step1",
+           "step2",
+           "step3",
+           "step4",
+           "step5",
+           "CKM",
+           "History",
+           "InitCentroids",
+           "InitOmega",]
