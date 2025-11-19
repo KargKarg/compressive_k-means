@@ -25,7 +25,7 @@ def r() -> np.ndarray[complex]:
     return Sk(X=np.ones(shape=(10, 20)), Omega=np.ones(shape=(100, 20)))
 
 
-def test_step1_exception(r) -> None:
+def test_step1_exception(r: np.ndarray[complex]) -> None:
     """
     """
     # Assert on r type.

@@ -4,6 +4,9 @@ from scipy.optimize._optimize import OptimizeResult
 from tqdm import tqdm
 from functools import cached_property
 from enum import Enum
+from typing import Callable
+import inspect
+from sklearn.metrics import silhouette_score
 
 
 class History(Enum):
@@ -122,10 +125,10 @@ def step1(r: np.ndarray[complex], Omega: np.ndarray[float], D: int, lower: float
     if init.value == InitCentroids.SAMPLE.value:    init_c: np.ndarray[float] = X[np.random.randint(low=0, high=X.shape[0]-1), :]
 
     # Function of the first step, we minimize it so -f.
-    f: function = lambda c : - np.real(np.vdot(np.exp(-1j * Omega @ c), r))
+    f: Callable[[np.ndarray[float]], np.ndarray[float]] = lambda c : - np.real(np.vdot(np.exp(-1j * Omega @ c), r))
 
     # Gradient of the aformentionned function with respect to C.
-    grad: function = lambda c : - np.real(-1j * (np.conj(r) * np.exp(-1j * Omega @ c)) @ Omega) # dim(grad(C)) = (C.shape[0],)
+    grad: Callable[[np.ndarray[float]], np.ndarray[float]] = lambda c : - np.real(-1j * (np.conj(r) * np.exp(-1j * Omega @ c)) @ Omega) # dim(grad(C)) = (C.shape[0],)
     
     # Same bounds on each dimensions.
     bounds: list[tuple[float, float]] = [(lower, upper)] * D
@@ -340,12 +343,11 @@ class CKM:
         - all_centroids: list[np.ndarray[float]] | None = The list of all centroids matrices through the optimisation.
 
     Methods:
-        - fit: function -> None = Learn the position of each cluster on a data-set X.
-        - predict: function -> np.ndarray[int] = Assign at each data point its cluster.
+        - fit: Callable[[np.ndarray[float]], None] = Learn the position of each cluster on a data-set X.
+        - predict: Callable[[np.ndarray[float]], np.ndarray[int]] = Assign at each data point its cluster.
     """
-    # TODO Return the best result according to a metric function.
 
-    def __init__(self, K: int, m: int, lower: float, upper: float, seed: int | float = 12, history: History = History.OFF, init_centroids: InitCentroids = InitCentroids.UNIFORM, init_Omega: InitOmega = InitOmega.NORMAL) -> None:
+    def __init__(self, K: int, m: int, lower: float, upper: float, seed: int | float = 12, iters: int = 1, metric: Callable[[np.ndarray[float], np.ndarray[int]], float] = silhouette_score, history: History = History.OFF, init_centroids: InitCentroids = InitCentroids.UNIFORM, init_Omega: InitOmega = InitOmega.NORMAL) -> None:
         """
         Defines the properties of the algorithm.
 
@@ -354,10 +356,12 @@ class CKM:
             - (required) m : int = The dimension of the sketch.
             - (required) lower: float | int = The lower bound for the Algorithm.
             - (required) upper: float | int = The upper bound for the Algorithm.
-            - (required) seed: float | int = The seed for the randomness.
-            - (optionnal) history: History = The parameter for the clinitialisation.
-            - (optionnal) init_centroids: InitCentroids = The parameter for the clusters initialisation.            
-            - (optionnal) init_Omega: InitOmega = The parameter for the omegas the initialisation.            
+            - (optional) seed: float | int = The seed for the randomness.
+            - (optional) iters: int = The number of runs to find the best clustering.
+            - (optional) metric: Callable[[np.ndarray[float], np.ndarray[int]], float] = Metric to maximize, will be used to assess the best clustering.
+            - (optional) history: History = The parameter for the clinitialisation.
+            - (optional) init_centroids: InitCentroids = The parameter for the clusters initialisation.            
+            - (optional) init_Omega: InitOmega = The parameter for the omegas the initialisation.            
 
         Returns:
             - (always) None.
@@ -376,6 +380,8 @@ class CKM:
         self._lower: float = lower
         self._upper: float = upper
         self.seed: int = seed
+        self._iters: int = iters
+        self._metric: Callable[[np.ndarray[float], np.ndarray[int]], float] = metric
         self.history: History = history
         self.init_centroids: InitCentroids = init_centroids
         self.init_Omega: InitOmega = init_Omega
@@ -392,6 +398,8 @@ class CKM:
         assert (self.m > 0) and (isinstance(self.m, int)), ":param m: must be an integer greater than zero."
         assert (isinstance(self._lower, (int, float))) and (isinstance(self._upper, (int, float))) and self._lower < self._upper, ":params lower, upper: must be either a float or a integer with :param lower: < :param upper:."
         assert isinstance(self.seed, int), ":param seed: must be either a float or a integer."
+        assert isinstance(self._iters, int) and self._iters > 0, ":param iters: must be an integer greater than zero."
+        assert isinstance(self._metric, Callable) and len(inspect.signature(self._metric).parameters) >= 2, ":param metric: must be a callable of at least 2 parameters."
         assert isinstance(self.history, History), ":param history: must be an enumeration of History."
         assert isinstance(self.init_centroids, InitCentroids), ":param init_centroids: must be an enumeration of InitCentroids."
         assert isinstance(self.init_Omega, InitOmega), ":param init_Omega: must be an enumeration of InitOmega."
@@ -502,26 +510,45 @@ class CKM:
 
         zhat: np.ndarray[complex] = Sk(X=X, Omega=Omega)
 
-        r: np.ndarray[complex] = zhat.copy()
+        best_c: np.ndarray[float] = np.empty(shape=(self._K, self._D))
+        best_metric: float = float("-inf")
+        best_history: list[np.ndarray[float]] = []
 
-        A_c: np.ndarray[complex] = np.exp(-1j * (self.centroids @ Omega.T))
+        for _ in tqdm(range(self._iters), desc="ITERS"):
 
-        for _ in tqdm(range(1, 2*self._K+1), desc="TRAINING"):
+            r: np.ndarray[complex] = zhat.copy()
 
-            c_new: np.ndarray[float] = step1(r=r, Omega=Omega, D=self._D, lower=self._lower, upper=self._upper, init=self.init_centroids, X=X)
+            A_c: np.ndarray[complex] = np.exp(-1j * (self.centroids @ Omega.T))
 
-            self.centroids, A_c = step2(C=self.centroids, Omega=Omega, c_new=c_new, A_c=A_c)
+            for _ in range(1, 2*self._K+1):
 
-            if self.centroids.shape[0] > self._K:
-                self.centroids, A_c = step3(zhat=zhat, A_c=A_c, C=self.centroids, K=self._K)
+                c_new: np.ndarray[float] = step1(r=r, Omega=Omega, D=self._D, lower=self._lower, upper=self._upper, init=self.init_centroids, X=X)
 
-            Alpha: np.ndarray[float] = step4(zhat=zhat, A_c=A_c)
+                self.centroids, A_c = step2(C=self.centroids, Omega=Omega, c_new=c_new, A_c=A_c)
 
-            self.centroids, Alpha = step5(zhat=zhat, Omega=Omega, C=self.centroids, A_c=A_c, Alpha=Alpha, r=zhat - A_c.T @ Alpha, lower=self._lower, upper=self._upper, epochs=100, eta=1e-2)
+                if self.centroids.shape[0] > self._K:
+                    self.centroids, A_c = step3(zhat=zhat, A_c=A_c, C=self.centroids, K=self._K)
 
-            if self.history.value == History.ON.value:  self._all_centroids.append(self.centroids)
+                Alpha: np.ndarray[float] = step4(zhat=zhat, A_c=A_c)
 
-            r = zhat - A_c.T @ Alpha
+                self.centroids, Alpha = step5(zhat=zhat, Omega=Omega, C=self.centroids, A_c=A_c, Alpha=Alpha, r=zhat - A_c.T @ Alpha, lower=self._lower, upper=self._upper, epochs=100, eta=1e-2)
+
+                if self.history.value == History.ON.value:  self._all_centroids.append(self.centroids)
+
+                r = zhat - A_c.T @ Alpha
+
+            pred: np.ndarray[int] = self.predict(X=X)
+            metric_value: float = self._metric(X, pred)
+
+            if metric_value > best_metric:  best_c, best_history = np.copy(self.centroids), self._all_centroids.copy() if self.history.value == History.ON.value else []
+
+            self._centroids = np.empty(shape=(0, self._D))
+
+            self.seed += 1
+
+        self.centroids = np.copy(best_c)
+        self.seed -= (self._iters - 1)
+        self._all_centroids = best_history.copy() if self.history.value == History.ON.value else None
 
         return None
     
