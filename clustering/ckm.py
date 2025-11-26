@@ -429,7 +429,7 @@ class CKM:
     
 
     @property
-    def centroids(self) -> np.ndarray[float]:
+    def cluster_centers_(self) -> np.ndarray[float]:
         """
         Property which defines the centroids matrix.
 
@@ -446,8 +446,8 @@ class CKM:
         return self._centroids
     
 
-    @centroids.setter
-    def centroids(self, value: np.ndarray[float]) -> None:
+    @cluster_centers_.setter
+    def cluster_centers_(self, value: np.ndarray[float]) -> None:
         """
         Setter which defines the replacement of the "self._centroids"'s value.
 
@@ -518,35 +518,35 @@ class CKM:
 
             r: np.ndarray[complex] = zhat.copy()
 
-            A_c: np.ndarray[complex] = np.exp(-1j * (self.centroids @ Omega.T))
+            A_c: np.ndarray[complex] = np.exp(-1j * (self.cluster_centers_ @ Omega.T))
 
             for _ in range(1, 2*self._K+1):
 
                 c_new: np.ndarray[float] = step1(r=r, Omega=Omega, D=self._D, lower=self._lower, upper=self._upper, init=self.init_centroids, X=X)
 
-                self.centroids, A_c = step2(C=self.centroids, Omega=Omega, c_new=c_new, A_c=A_c)
+                self.cluster_centers_, A_c = step2(C=self.cluster_centers_, Omega=Omega, c_new=c_new, A_c=A_c)
 
-                if self.centroids.shape[0] > self._K:
-                    self.centroids, A_c = step3(zhat=zhat, A_c=A_c, C=self.centroids, K=self._K)
+                if self.cluster_centers_.shape[0] > self._K:
+                    self.cluster_centers_, A_c = step3(zhat=zhat, A_c=A_c, C=self.cluster_centers_, K=self._K)
 
                 Alpha: np.ndarray[float] = step4(zhat=zhat, A_c=A_c)
 
-                self.centroids, Alpha = step5(zhat=zhat, Omega=Omega, C=self.centroids, A_c=A_c, Alpha=Alpha, r=zhat - A_c.T @ Alpha, lower=self._lower, upper=self._upper, epochs=100, eta=1e-2)
+                self.cluster_centers_, Alpha = step5(zhat=zhat, Omega=Omega, C=self.cluster_centers_, A_c=A_c, Alpha=Alpha, r=zhat - A_c.T @ Alpha, lower=self._lower, upper=self._upper, epochs=100, eta=1e-2)
 
-                if self.history.value == History.ON.value:  self._all_centroids.append(self.centroids)
+                if self.history.value == History.ON.value:  self._all_centroids.append(self.cluster_centers_)
 
                 r = zhat - A_c.T @ Alpha
 
             pred: np.ndarray[int] = self.predict(X=X)
             metric_value: float = self._metric(X, pred)
 
-            if metric_value > best_metric:  best_c, best_history = np.copy(self.centroids), self._all_centroids.copy() if self.history.value == History.ON.value else []
+            if metric_value > best_metric:  best_c, best_history = np.copy(self.cluster_centers_), self._all_centroids.copy() if self.history.value == History.ON.value else []
 
             self._centroids = np.empty(shape=(0, self._D))
 
             self.seed += 1
 
-        self.centroids = np.copy(best_c)
+        self.cluster_centers_ = np.copy(best_c)
         self.seed -= (self._iters - 1)
         self._all_centroids = best_history.copy() if self.history.value == History.ON.value else None
 
@@ -568,7 +568,7 @@ class CKM:
             - dim(pred) = (N,)
         """
         assert isinstance(X, np.ndarray) and np.issubdtype(X.dtype, np.floating) and X.size > 0, ":param X: has to be a non-empty-array of floating numbers."
-        return np.argmin(a=np.linalg.norm(x=(X[:, None, :] - self.centroids), axis=2), axis=1)
+        return np.argmin(a=np.linalg.norm(x=(X[:, None, :] - self.cluster_centers_), axis=2), axis=1)
     
 
 __all__ = ["Sk",
