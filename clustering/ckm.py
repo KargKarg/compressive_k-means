@@ -403,7 +403,7 @@ class CKM:
 
         return None
     
-
+    # TODO
     def draw_Omega(self, X: np.ndarray[float], block: int, frac_m: int = 10, frac_n: int = 10, n_iters: int = 5) -> np.ndarray[float]:
         """
         Property which defines the frequency matrix.
