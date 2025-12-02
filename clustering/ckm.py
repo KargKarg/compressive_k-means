@@ -2,7 +2,6 @@ import numpy as np
 from scipy.optimize import lsq_linear, minimize
 from scipy.optimize._optimize import OptimizeResult
 from tqdm import tqdm
-from functools import cached_property
 from enum import Enum
 from typing import Callable
 import inspect
@@ -337,7 +336,6 @@ class CKM:
         - seed: int | float = The seed for the runs.
         - history: History = The history parameter.
         - init_centroids: InitCentroids = The initialisation of centroids parameter.
-        - init_Omega: InitOmega = The initialisation of omegas parameter.
         - Omega: np.ndarray[float] = The frequency matrix.
         - centroids: np.ndarray[float] = The centroids matrix.
         - all_centroids: list[np.ndarray[float]] | None = The list of all centroids matrices through the optimisation.
@@ -347,7 +345,7 @@ class CKM:
         - predict: Callable[[np.ndarray[float]], np.ndarray[int]] = Assign at each data point its cluster.
     """
 
-    def __init__(self, K: int, m: int, lower: float, upper: float, seed: int | float = 12, iters: int = 1, metric: Callable[[np.ndarray[float], np.ndarray[int]], float] = silhouette_score, history: History = History.OFF, init_centroids: InitCentroids = InitCentroids.UNIFORM, init_Omega: InitOmega = InitOmega.NORMAL) -> None:
+    def __init__(self, K: int, m: int, lower: float, upper: float, seed: int | float = 12, iters: int = 1, metric: Callable[[np.ndarray[float], np.ndarray[int]], float] = silhouette_score, history: History = History.OFF, init_centroids: InitCentroids = InitCentroids.UNIFORM) -> None:
         """
         Defines the properties of the algorithm.
 
@@ -361,7 +359,6 @@ class CKM:
             - (optional) metric: Callable[[np.ndarray[float], np.ndarray[int]], float] = Metric to maximize, will be used to assess the best clustering.
             - (optional) history: History = The parameter for the clinitialisation.
             - (optional) init_centroids: InitCentroids = The parameter for the clusters initialisation.            
-            - (optional) init_Omega: InitOmega = The parameter for the omegas the initialisation.            
 
         Returns:
             - (always) None.
@@ -384,7 +381,6 @@ class CKM:
         self._metric: Callable[[np.ndarray[float], np.ndarray[int]], float] = metric
         self.history: History = history
         self.init_centroids: InitCentroids = init_centroids
-        self.init_Omega: InitOmega = init_Omega
         
         return self.__post_init__()
     
@@ -402,15 +398,13 @@ class CKM:
         assert isinstance(self._metric, Callable) and len(inspect.signature(self._metric).parameters) >= 2, ":param metric: must be a callable of at least 2 parameters."
         assert isinstance(self.history, History), ":param history: must be an enumeration of History."
         assert isinstance(self.init_centroids, InitCentroids), ":param init_centroids: must be an enumeration of InitCentroids."
-        assert isinstance(self.init_Omega, InitOmega), ":param init_Omega: must be an enumeration of InitOmega."
 
         if self.history.value == History.ON.value:  self._all_centroids: list[np.ndarray[float]] = []
 
         return None
     
 
-    @cached_property
-    def Omega(self) -> np.ndarray[float]:
+    def draw_Omega(self, X: np.ndarray[float], block: int, frac_m: int = 10, frac_n: int = 10, n_iters: int = 5) -> np.ndarray[float]:
         """
         Property which defines the frequency matrix.
 
@@ -424,9 +418,59 @@ class CKM:
             - dim(Omega) = (m, D)
         """
         np.random.seed(seed=self.seed)
-        if self.init_Omega.value == InitOmega.NORMAL.value: return np.random.normal(size=(self.m, self._D))
-        if self.init_Omega.value == InitOmega.UNIFORM.value: return np.random.uniform(low=self._lower, high=self._upper, size=(self.m, self._D))
-    
+
+        N, D = X.shape
+        
+        m0: int = self.m // frac_m
+        n0: int = N // frac_n
+
+        # Initialization
+        sigma = 1
+
+        for _ in range(n_iters):
+            
+            # Draw some frequencies adapted to the current σ^2
+            Omega: np.ndarray[float] = np.random.multivariate_normal(np.zeros(D), np.linalg.inv(sigma * np.identity(D)), size=m0)
+
+            # Compute the radius
+            rad: np.ndarray[float] = np.linalg.norm(Omega, axis=1)**2
+
+            # Sort the omegas according to their frequencies
+            Omega: np.ndarray[float] = Omega[(idx := np.argsort(rad))]
+            rad: np.ndarray[float] = rad[idx]
+
+            # Small empirical sketch
+            z: np.ndarray[complex] = Sk(Omega, X[np.random.choice(np.arange(N), size=(n0,), replace=False)])
+
+            # Find maximum peak in each block
+            J: np.ndarray[complex] = np.zeros(block)
+            R: np.ndarray[float] = np.zeros(block)
+            
+            for q in range(block):
+
+                idx: slice = slice(q * ((m0) // block), (q + 1) * ((m0) // block))
+
+                block_z: np.ndarray[complex] = z[idx]
+                block_r: np.ndarray[float] = rad[idx]
+
+                kmax: slice = np.argmax(np.abs(block_z))
+
+                # Construction of ê
+                J[q] = np.abs(block_z[kmax])
+
+                # Construction of R_jq
+                R[q] = block_r[kmax]
+            
+            # Find the optimal σ^2 by a lsq problem
+            sigma: float = minimize(
+                fun = lambda sigma: np.mean((J - np.exp(-0.5 * R * sigma))**2),
+                x0 = sigma,
+                bounds = [(0, None)],
+                method = "L-BFGS-B").x[0]
+        
+        Omega: np.ndarray[float] = np.random.multivariate_normal(np.zeros(D), np.linalg.inv(sigma * np.identity(D)), size=self.m)
+
+        return Omega
 
     @property
     def cluster_centers_(self) -> np.ndarray[float]:
@@ -503,10 +547,9 @@ class CKM:
         assert isinstance(X, np.ndarray) and np.issubdtype(X.dtype, np.floating) and X.size > 0, ":param X: has to be a non-empty-array of floating numbers."
 
         np.random.seed(seed=self.seed)
-        N: int = X.shape[0]
         self._D: int = X.shape[1]
 
-        Omega: np.ndarray[float] = self.Omega
+        Omega: np.ndarray[float] = self.draw_Omega(X=X, block=self._K)
 
         zhat: np.ndarray[complex] = Sk(X=X, Omega=Omega)
 

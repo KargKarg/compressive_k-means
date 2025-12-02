@@ -1,0 +1,170 @@
+{
+    "blobs": {
+        "KM": {
+            "Adjusted Rand Index": {
+                "mean": 0.8072413478156799,
+                "std": 0.0
+            },
+            "Adjusted Mutual info": {
+                "mean": 0.8624609796107632,
+                "std": 0.0
+            },
+            "Homogeneity": {
+                "mean": 0.8642861612924561,
+                "std": 0.0
+            },
+            "Completeness": {
+                "mean": 0.8655874581753357,
+                "std": 0.0
+            },
+            "V-measure": {
+                "mean": 0.8649363202838116,
+                "std": 0.0
+            },
+            "Fowlkes-Mallows": {
+                "mean": 0.8264144363532675,
+                "std": 0.0
+            },
+            "Silhouette": {
+                "mean": 0.5312456878970452,
+                "std": 0.0
+            },
+            "Davies-Bouldin": {
+                "mean": 0.6727807535468109,
+                "std": 0.0
+            }
+        },
+        "CKM": {
+            "Adjusted Rand Index": {
+                "mean": 0.7641245668120756,
+                "std": 0.0
+            },
+            "Adjusted Mutual info": {
+                "mean": 0.8547444038321212,
+                "std": 0.0
+            },
+            "Homogeneity": {
+                "mean": 0.8446075772401217,
+                "std": 0.0
+            },
+            "Completeness": {
+                "mean": 0.8706122165103594,
+                "std": 0.0
+            },
+            "V-measure": {
+                "mean": 0.8574127672519587,
+                "std": 0.0
+            },
+            "Fowlkes-Mallows": {
+                "mean": 0.7908817364059562,
+                "std": 0.0
+            },
+            "Silhouette": {
+                "mean": 0.5390732072843868,
+                "std": 0.0
+            },
+            "Davies-Bouldin": {
+                "mean": 0.678086832489783,
+                "std": 0.0
+            }
+        },
+        "RANDOM": {
+            "Adjusted Rand Index": {
+                "mean": 0.49274506500403903,
+                "std": 0.0
+            },
+            "Adjusted Mutual info": {
+                "mean": 0.7233839139912355,
+                "std": 0.0
+            },
+            "Homogeneity": {
+                "mean": 0.6370318142345763,
+                "std": 0.0
+            },
+            "Completeness": {
+                "mean": 0.8472294601959479,
+                "std": 0.0
+            },
+            "V-measure": {
+                "mean": 0.7272467851843406,
+                "std": 0.0
+            },
+            "Fowlkes-Mallows": {
+                "mean": 0.5942063590441004,
+                "std": 0.0
+            },
+            "Silhouette": {
+                "mean": 0.46044638383405834,
+                "std": 0.0
+            },
+            "Davies-Bouldin": {
+                "mean": 0.8908328010521299,
+                "std": 0.0
+            }
+        }
+    },
+    "digits": {
+        "KM": {
+            "Adjusted Rand Index": [],
+            "Adjusted Mutual info": [],
+            "Homogeneity": [],
+            "Completeness": [],
+            "V-measure": [],
+            "Fowlkes-Mallows": [],
+            "Silhouette": [],
+            "Davies-Bouldin": []
+        },
+        "CKM": {
+            "Adjusted Rand Index": [],
+            "Adjusted Mutual info": [],
+            "Homogeneity": [],
+            "Completeness": [],
+            "V-measure": [],
+            "Fowlkes-Mallows": [],
+            "Silhouette": [],
+            "Davies-Bouldin": []
+        },
+        "RANDOM": {
+            "Adjusted Rand Index": [],
+            "Adjusted Mutual info": [],
+            "Homogeneity": [],
+            "Completeness": [],
+            "V-measure": [],
+            "Fowlkes-Mallows": [],
+            "Silhouette": [],
+            "Davies-Bouldin": []
+        }
+    },
+    "iris": {
+        "KM": {
+            "Adjusted Rand Index": [],
+            "Adjusted Mutual info": [],
+            "Homogeneity": [],
+            "Completeness": [],
+            "V-measure": [],
+            "Fowlkes-Mallows": [],
+            "Silhouette": [],
+            "Davies-Bouldin": []
+        },
+        "CKM": {
+            "Adjusted Rand Index": [],
+            "Adjusted Mutual info": [],
+            "Homogeneity": [],
+            "Completeness": [],
+            "V-measure": [],
+            "Fowlkes-Mallows": [],
+            "Silhouette": [],
+            "Davies-Bouldin": []
+        },
+        "RANDOM": {
+            "Adjusted Rand Index": [],
+            "Adjusted Mutual info": [],
+            "Homogeneity": [],
+            "Completeness": [],
+            "V-measure": [],
+            "Fowlkes-Mallows": [],
+            "Silhouette": [],
+            "Davies-Bouldin": []
+        }
+    }
+}
