@@ -12,7 +12,7 @@ from clustering import *
 
 
 SEED = 12
-EXP = 1
+EXP = 5
 np.random.seed(SEED)
 
 METRICS: dict[str: dict[str: dict[str: list[float]]]] = {
