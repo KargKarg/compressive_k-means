@@ -34,18 +34,6 @@ class InitCentroids(Enum):
     SAMPLE: int = 2
 
 
-class InitOmega(Enum):
-    """
-    Defines the method used for the initialisation of the omegas.
-
-    Enumeration:
-        - (0) UNIFORM: int = The omegas will be drawn from a uniform distribution starting by "lower", ending by "upper".
-        - (1) NORMAL: int = The omegas will be drawn from a normal distribution with µ=0 and s²=1.
-    """
-    UNIFORM: int = 0
-    NORMAL: int = 1
-
-
 def Sk(X: np.ndarray[float], Omega: np.ndarray[float], Beta: np.ndarray[float] | None = None) -> np.ndarray[complex]:
     """
     Computes the compressive sketch of a dataset using weighted complex random Fourier features.
@@ -403,7 +391,6 @@ class CKM:
 
         return None
     
-    # TODO
     def draw_Omega(self, X: np.ndarray[float], block: int, frac_m: int = 10, frac_n: int = 10, n_iters: int = 5) -> np.ndarray[float]:
         """
         Property which defines the frequency matrix.
@@ -622,5 +609,4 @@ __all__ = ["Sk",
            "step5",
            "CKM",
            "History",
-           "InitCentroids",
-           "InitOmega",]
+           "InitCentroids"]

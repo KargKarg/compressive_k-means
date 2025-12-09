@@ -37,7 +37,7 @@ for dataset in (data := presentation.datasets):
 
     MODELS: dict[str: Callable] = {
         "KM": lambda s: KMeans(n_clusters=K, init="random", random_state=s, max_iter=3),
-        "CKM": lambda s: CKM(K=K, m=N//2, lower=np.min(X), upper=np.max(X), iters=3, init_centroids=InitCentroids.SAMPLE, seed=s),
+        "CKM": lambda s: CKM(K=K, m=int(N*K + (D/100)), lower=np.min(X), upper=np.max(X), iters=3, init_centroids=InitCentroids.UNIFORM, seed=s),
         "RANDOM": lambda s: presentation.RandomClustering(K=K, seed=s)
     }
 
